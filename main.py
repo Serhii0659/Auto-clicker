@@ -15,11 +15,13 @@ try:
     import win32con
     import win32process
     import win32api
+    import win32event
 except ImportError as e:
     win32gui = None
     win32con = None
     win32process = None
     win32api = None
+    win32event = None
     WINDOWS_SUPPORT = False
     logging.warning("pywin32 не встановлено. Функція вибору вікна недоступна: %s", e)
 else:
@@ -73,6 +75,8 @@ translations = {
         "msg_started_window": "Started - Очікування активації обраного вікна",
         "msg_started_any": "Started - Кліки працюють у будь-якому вікні",
         "msg_stopped": "Stopped",
+        "msg_already_running": "Інший екземпляр програми вже відкритий",
+        "msg_already_running_title": "Програма вже запущена",
         "config_file_content": """
 
 ═══════════════════════════════════════════════════════════════════════
@@ -136,6 +140,8 @@ translations = {
         "msg_started_window": "Started - Waiting for selected window activation",
         "msg_started_any": "Started - Clicks work in any window",
         "msg_stopped": "Stopped",
+        "msg_already_running": "Another instance of the program is already running",
+        "msg_already_running_title": "Program Already Running",
         "config_file_content": """
 
 ═══════════════════════════════════════════════════════════════════════
@@ -456,24 +462,11 @@ class AutoClickerApp(ctk.CTk):
             # Якщо іконка не встановлена, пропускаємо
             return
 
-        try:
-            # Декодуємо Base64 → байти
-            icon_data = base64.b64decode(ICON_BASE64)
-
-            # Створюємо тимчасовий файл .ico
-            temp_ico_path = Path.home() / 'AppData' / 'Local' / 'Temp' / 'autoclicker_icon.ico'
-            temp_ico_path.parent.mkdir(parents=True, exist_ok=True)
-
-            # Зберігаємо байти у файл
-            with open(temp_ico_path, 'wb') as f:
-                f.write(icon_data)
-
-            # Встановлюємо іконку
-            self.iconbitmap(str(temp_ico_path))
-            print(f"Іконку встановлено успішно: {temp_ico_path}")
-
-        except Exception as e:
-            print(f"Помилка встановлення іконки: {e}")
+        success = set_window_icon(self)
+        if success:
+            print("Іконку встановлено успішно")
+        else:
+            print("Не вдалося встановити іконку")
 
     def get_app_hwnd(self):
         """Отримати HWND власного вікна програми"""
@@ -1214,6 +1207,124 @@ class AutoClickerApp(ctk.CTk):
         print(t("msg_stopped"))
 
 
+def set_window_icon(window):
+    """Встановлює іконку для вказаного вікна"""
+    try:
+        # Декодуємо Base64 в байти
+        icon_data = base64.b64decode(ICON_BASE64)
+
+        # Зберігаємо у тимчасовий файл
+        temp_ico_path = Path(os.getenv('TEMP')) / 'autoclicker_icon.ico'
+        temp_ico_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Зберігаємо байти у файл
+        with open(temp_ico_path, 'wb') as f:
+            f.write(icon_data)
+
+        # Встановлюємо іконку
+        window.iconbitmap(str(temp_ico_path))
+        return True
+    except Exception as e:
+        logging.error(f"Помилка встановлення іконки: {e}")
+        return False
+
+
+def check_single_instance():
+    """Перевіряє чи вже запущений екземпляр програми"""
+    global mutex
+
+    if not WINDOWS_SUPPORT or win32event is None:
+        # Якщо немає pywin32, не можемо перевірити - дозволяємо запуск
+        return True
+
+    # Унікальний ідентифікатор для mutex
+    mutex_name = "Global\\AutoClickerPro_SingleInstance_Mutex"
+
+    try:
+        # Спробуємо створити mutex
+        mutex = win32event.CreateMutex(None, False, mutex_name)  # type: ignore
+        last_error = win32api.GetLastError()
+
+        # Якщо mutex вже існує, програма вже запущена
+        if last_error == 183:  # ERROR_ALREADY_EXISTS
+            return False
+
+        return True
+    except Exception as e:
+        logging.error(f"Error checking single instance: {e}")
+        # У випадку помилки дозволяємо запуск
+        return True
+
+
+def show_already_running_dialog():
+    """Показує повідомлення про вже запущений екземпляр"""
+    # Завантажуємо мову з конфігурації
+    global CurrentLanguage
+    try:
+        config_path = Path(os.getenv('APPDATA')) / 'AutoClickerPro' / 'config.json'
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                last_brace = content.rfind('}')
+                if last_brace != -1:
+                    json_content = content[:last_brace + 1].strip()
+                else:
+                    json_content = content.strip()
+                config = json.loads(json_content)
+                CurrentLanguage = config.get('language', 'UA')
+        else:
+            CurrentLanguage = 'UA'
+    except:
+        CurrentLanguage = 'UA'
+
+    # Створюємо просте вікно попередження
+    ctk.set_appearance_mode("Dark")
+    ctk.set_default_color_theme("blue")
+
+    root = ctk.CTk()
+    root.title(t("msg_already_running_title"))
+    root.geometry("400x150")
+    root.resizable(False, False)
+
+    # Встановлюємо іконку
+    if ICON_BASE64:
+        set_window_icon(root)
+
+    # Центруємо вікно
+    root.update_idletasks()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    x = (screen_width - 400) // 2
+    y = (screen_height - 150) // 2
+    root.geometry(f"400x150+{x}+{y}")
+
+    # Повідомлення
+    label = ctk.CTkLabel(
+        root,
+        text=t("msg_already_running"),
+        font=("Arial", 14),
+        wraplength=350
+    )
+    label.pack(pady=30)
+
+    # Кнопка OK
+    btn = ctk.CTkButton(
+        root,
+        text="OK",
+        command=root.destroy,
+        width=100
+    )
+    btn.pack(pady=10)
+
+    root.mainloop()
+
+
+# Глобальна змінна для збереження mutex
+mutex = None
+
 if __name__ == "__main__":
-    app = AutoClickerApp()
-    app.mainloop()
+    if not check_single_instance():
+        show_already_running_dialog()
+    else:
+        app = AutoClickerApp()
+        app.mainloop()
