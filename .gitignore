@@ -1,0 +1,49 @@
+# ==================================
+# AutoClicker Pro - Git Ignore File
+# ==================================
+
+# --- IDE and Editor ---
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+venv/
+env/
+ENV/
+
+# --- PyInstaller ---
+*.spec
+*.manifest
+*.exe.config
+
+# --- Project Specific ---
+# Config file is auto-generated, don't track it
+# (Optional: remove this line if you want to track config)
+# config.json
+
+# --- OS Specific ---
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Temporary Files ---
+*.log
+*.tmp
+*.bak
+*.cache
