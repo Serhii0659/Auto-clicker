@@ -1,5 +1,6 @@
 # 🖱️ AutoClicker Pro
 
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/Serhii0659/Auto-clicker?color=blue)](https://github.com/Serhii0659/Auto-clicker/releases)
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Windows-lightgrey.svg)](https://www.microsoft.com/windows/)
@@ -144,7 +145,6 @@ Auto-clicker/
 - 🗑 **Windows Only:** Видалено абстракцію WINDOWS_SUPPORT, жорстка орієнтація на Win32 API.
 - ⚙️ **Safe Callbacks:** Проблемні lambda в UI-івентах замінено на безпечні замикання (closures).
 - 📝 **Config:** Додано метадані (версія, рік, MIT License) у шаблон конфігу.
-- 🗜️ **Build Size:** Оптимізовано збірку — розмір готового .exe файлу зменшився з 20 MB до 15 MB.
 ### v1.1 (2025-11-22)
 - 🚫 Перевірка єдиного екземпляру програми (Win32 Mutex)
 ### v1.0 (2025-11-21)
