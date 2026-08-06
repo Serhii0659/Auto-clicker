@@ -28,7 +28,7 @@ jobs:
           pip install pyinstaller==6.19.0
 
       - name: Build executable with PyInstaller
-        run: pyinstaller --onefile --noconsole --icon=icon.ico --name="AutoClicker Pro" main.py
+        run: pyinstaller --onefile --noconsole --icon=icon.ico --add-data="icon.ico;." --name="AutoClicker Pro" main.py
 
       - name: Create GitHub Release and Upload Asset
         uses: softprops/action-gh-release@v2
